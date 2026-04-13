@@ -1,6 +1,25 @@
 import os
 import json
 
+LO_SHU_POSITIONS = {
+    1: {"name": "Kan",    "element": "Water",   "direction": "North",     "symbol": "☵", "quality": "The Beginning / Deep Wisdom"},
+    2: {"name": "Kun",    "element": "Earth",   "direction": "Southwest", "symbol": "☷", "quality": "Receptivity / Nurturing"},
+    3: {"name": "Zhen",   "element": "Thunder", "direction": "East",      "symbol": "☳", "quality": "Arousing / Initiating Action"},
+    4: {"name": "Xun",    "element": "Wind",    "direction": "Southeast", "symbol": "☴", "quality": "Gentle / Penetrating Influence"},
+    5: {"name": "Tai Ji", "element": "Center",  "direction": "Center",    "symbol": "☯", "quality": "The Pivot / Balance of All Things"},
+    6: {"name": "Qian",   "element": "Heaven",  "direction": "Northwest", "symbol": "☰", "quality": "Creative / Expansive Strength"},
+    7: {"name": "Dui",    "element": "Lake",    "direction": "West",      "symbol": "☱", "quality": "Joyful / Fulfillment"},
+    8: {"name": "Gen",    "element": "Mountain","direction": "Northeast", "symbol": "☶", "quality": "Still / Meditation"},
+    9: {"name": "Li",     "element": "Fire",    "direction": "South",     "symbol": "☲", "quality": "Clinging / Clarity"},
+}
+
+def visitor_to_lo_shu(visitor_count: int) -> dict:
+    """Convert visitor count to Lo Shu position (1-9 cycling)."""
+    if visitor_count <= 0:
+        return LO_SHU_POSITIONS[5]  # Default to Tai Ji
+    position = 1 + ((visitor_count - 1) % 9)
+    return LO_SHU_POSITIONS[position]
+
 HELLO_WORLD = """<!doctype html>
 <html lang="en">
 <head>
@@ -458,7 +477,8 @@ HELLO_WORLD = """<!doctype html>
     </main>
 
     <footer class="center">
-      <small>It's time to start investing in your future, one baby step at a time!! {{VISITOR_COUNT}}</small>
+      <small>It's time to start investing in your future, one baby step at a time!! {{VISITOR_COUNT}}</small><br>
+      <small style="font-family:monospace;">{{VISITOR_INFO}}</small>
     </footer>
   </div>
 
@@ -546,6 +566,13 @@ def application(environ, start_response):
     except (ValueError, IOError):
         count = 0  # Fallback if file issues
 
+    # Lo Shu visitor translation
+    lo_shu = visitor_to_lo_shu(count)
+    visitor_info = (
+        f"Visitor #{count} \u2014 {lo_shu['symbol']} {lo_shu['name']}"
+        f" ({lo_shu['element']}, {lo_shu['direction']}) \u2014 {lo_shu['quality']}"
+    )
+
     # Scan static/ for images and group by window
     static_dir = 'static'
     image_groups = {}
@@ -574,7 +601,7 @@ def application(environ, start_response):
     js_groups = "var imageGroups = " + json.dumps(image_groups) + ";"
 
     # Inject into HTML
-    content = HELLO_WORLD.replace('{{IMAGE_GROUPS}}', js_groups).replace('{{VISITOR_COUNT}}', f'Visitor count: {count}')
+    content = HELLO_WORLD.replace('{{IMAGE_GROUPS}}', js_groups).replace('{{VISITOR_COUNT}}', f'Visitor count: {count}').replace('{{VISITOR_INFO}}', visitor_info)
     content_bytes = content.encode("utf-8")
     headers = [
       ("Content-Type", "text/html; charset=utf-8"),
